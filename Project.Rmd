@@ -1,0 +1,646 @@
+---
+title: "**A Bayesian Logistic Regression Model to analyze the survival of breast cancer patients after the surgery**"
+author: "**Hasini Gammune**"
+date: \today
+institute: University of Texas at Dallas
+fontsize: 10pt
+output: 
+  beamer_presentation:
+    includes:
+      in_header: d.tex
+    theme: "CambridgeUS"
+    colortheme: "dolphin"
+    slide_level: 2
+    toc: TRUE
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+options(xtable.comment = FALSE)
+knitr::opts_chunk$set(dev = 'pdf')
+```
+
+```{r}
+library(xtable)
+options(xtable.floating = FALSE)
+options(xtable.timestamp = "")
+data(tli)
+```
+# Introduction 
+
+- Logistic regression is a special case of regression analysis and is used when the dependent variable is nominally scaled or ordinally scaled. 
+\vspace{0.2cm}
+-   Logistic regression is the standard and the most reliable approach in the analysis of the binary and categorical outcome data.
+\vspace{0.2cm}
+-   A Supervised machine learning method that is used to model the success probability of a certain class or event.
+\vspace{0.2cm}
+-   A probabilistic model which automatically allows to compute the probability of success for a new data point.
+\vspace{0.2cm}
+- One of the most popular and powerfull ML models used in classifications.
+
+
+
+## Motivation
+
+**Example**
+
+Suppose a certain credit card company is using a logistic regression model to predict whether a credit card can be approved and suppose they train their developed model on very few negative data. Then under this circumstance, given a new data point, the developed model has a very low probability for the newly applied credit card being approved.
+
+- Here the justifications relies totally on large sample arguments and training the model on fewer number of data gives unclear conclusions.
+
+- A methodology is needed 
+
+  1. to capture the uncertainty about the model.
+  2. in verifying whether the model parameters are meaningful.
+
+\vspace{0.2cm}
+\centering
+A **Bayesian Logistic Regression Model** can be utilized  to overcome this issue.
+
+
+## **Research problem and Data **
+
+- Develop a Bayesian Logistic Regression model to classify the persons who are survived after the surgery and who are dead after the surgery from the given Haberman Cancer Survival data set. 
+\vspace{0.2cm}
+
+- **Haberman Cancer Survival data set**: The data set contains cases from a study that was conducted between 1958 and 1970 at the University of Chicago's Billings Hospital on the survival of patients who had undergone surgery for breast cancer.
+
+\vspace{0.2cm}
+- The response is the Survival status (class attribute)
+
+         1 = the patient survived 5 years or longer
+         0 = the patient died within 5 year
+
+- The predictor variables are, 
+   1. Age of patient at time of operation (numerical)
+   2. Number of positive axillary nodes detected (numerical)
+   3. Tumour size (numerical)
+   
+   
+   
+# Model and Bayesian inference
+
+## Model
+
+- Suppose $Y_i$, the survival status of the $i^{th}$ individual follows a Bernoulli distribution with mean $\mu_i$
+
+$$
+\begin{aligned}
+Y_i|\mu_i &\sim Bernoulli(\mu_i)\\
+\text{ Then } \quad  logit(\mu_i)=log\Big(\frac{\mu_i}{1-\mu_i}\Big) &= \beta^T\mathbf{x_i}=\beta_0+\beta_1x_{i1}+...+\beta_px_{ip}\\
+\text{ and } \quad \mu_i&= \frac{exp(\beta^T\mathbf{x_i})}{1+exp(\beta^T\mathbf{x_i})}
+\end{aligned}
+$$
+
+
+## Bayesian inference
+
+\small
+- Likelihood
+$$
+\begin{aligned}
+f(\mathbf{y}|\mathbf{\beta})  
+&= \prod_{i=1}^{n}\text{Bern}\left(y_i;\frac{\exp(\beta^T \mathbf{x_i})}{1+\exp(\beta^T \mathbf{x_i}) }\right)\\
+&= \prod_{i=1}^{n}\left(\frac{\exp(\beta^T \mathbf{x_i})}{1+\exp(\beta^T \mathbf{x_i}) }\right)^{y_i}\left(\frac{1}{1+\exp(\beta^T \mathbf{x_i}) }\right)^{1-y_i}\\
+&= \exp\left(\sum_{i=1}^{n}(y_i(\beta^T \mathbf{x_i})- \log(1+\exp(\beta^T \mathbf{x_i})))\right)\\
+\end{aligned}
+$$
+
+- Prior 
+$$
+\begin{aligned}
+\beta &\sim \text{MN}(\mathbf{b},\sigma^2_{\beta}\mathbf{I})\\
+\pi(\beta)&= \frac{1}{\sqrt{(2\pi)^p|\sigma_{\beta}^2\mathbf{I}|}}\exp\left(-\frac{1}{2\sigma^2_{\beta}}(\beta-\mathbf{b})^T(\beta-\mathbf{b})\right)\\
+&\propto \exp\left(-\frac{1}{2\sigma^2_{\beta}}(\beta-\mathbf{b})^T(\beta-\mathbf{b})\right)
+\end{aligned}
+$$
+
+
+## Cont..
+- Posterior
+
+
+$$
+\begin{aligned}
+\pi(\beta|\mathbf{y}) &\propto f(\mathbf{y}|\mathbf{\beta}) \times \pi(\beta)\\
+&\propto \exp\left(\sum_{i=1}^{n}(y_i(\beta^T \mathbf{x_i})- \log(1+\exp(\beta^T \mathbf{x_i})))\right) \exp\left(-\frac{1}{2\sigma^2_{\beta}}(\beta-\mathbf{b})^T(\beta-\mathbf{b})\right)
+\end{aligned}
+$$
+
+
+- The posterior distribution is **not in closed form**
+
+- Gibbs Sampler method cannot be used.
+
+- Here I used Metropolis-Hasting Algorithm to approximate the posterior distribution.
+
+## Model Fitting
+
+- Random Walk Metropolis-Hastings
+
+$$
+\begin{aligned}
+\mathbf{r}_{MH}&=\frac{\pi(\beta^*|\mathbf{y})}{\pi(\beta^{(t-1)}|\mathbf{y})}\frac{J(\beta^{(t-1)}|\beta^*)}{J(\beta^*|\beta^{(t-1)})}\\
+&=\frac{ \prod_{i=1}^{n}\text{Bern}\left(y_i;\frac{\exp(\beta^{*T} \mathbf{x_i})}{1+\exp(\beta^{*T} \mathbf{x_i}) }\right)}{ \prod_{i=1}^{n}\text{Bern}\left(y_i;\frac{\exp(\beta^{(t-1)T} \mathbf{x_i})}{1+\exp(\beta^{(t-1)T} \mathbf{x_i}) }\right)}\frac{\text{MN}(\beta^*;\mathbf{b},\sigma^2_{\beta}\mathbf{I})}{\text{MN}(\beta^{(t-1)};\mathbf{b},\sigma^2_{\beta}\mathbf{I})}\\
+\end{aligned}
+$$
+
+- Proposal distribution
+
+$$
+\begin{aligned}
+J(\beta^*|\beta^{(t-1)}) \sim \text{MN}(\beta^{(t-1)},k(\mathbf{X}^T\mathbf{X}))
+\end{aligned}
+$$
+
+# Simulated data analysis
+
+$$
+\begin{aligned}
+logit(\theta_i)=log\Big(\frac{\theta_i}{1-\theta_i}\Big) &= \beta^T\mathbf{x_i}+\epsilon=\beta_0+\beta_1x_{i1}+...+\beta_px_{ip}+\epsilon_i\\
+\end{aligned}
+$$
+```{r echo=TRUE}
+##Simulating the data
+set.seed(1111)
+n<-50
+X<-cbind(rep(1, n ),rnorm(n),rnorm(n))
+beta<-c(5,0.5,1) #fix beta
+epsilon<-rnorm(n,0,5) #generating error terms
+theta<- exp((X %*% beta)+epsilon) /(1 + exp((X %*% beta) +epsilon)) ## calculating theta
+y<-rbinom(n,1,theta)
+```
+
+## Validating the Algorithm
+
+```{r include=FALSE}
+# Set the prior setting
+p <- 2
+sigma_beta <- 100
+b <- rep(0, p + 1)
+
+# Set the algorithm setting
+T <- 10000
+B <- 5000
+k <- 20
+cov <- k * solve (t( X ) %*% X )
+beta_initial <- rep (0, p + 1)
+
+# Create spaces to store the results
+beta_store <- matrix ( NA , nrow = T , ncol = p + 1)
+yf_store <- matrix ( NA , nrow = T , ncol = n )
+
+# Implement the RWMH
+require(mvnfast)
+beta <- beta_initial
+omega <- exp( X %*% beta ) /(1 + exp( X %*% beta ) )
+accept <- 0
+
+for (t in 1: T ) {
+  beta_star <- t( rmvn (1, mu = beta , sigma = cov) )
+  omega_star <- exp( X %*% beta_star ) /(1 + exp( X %*% beta_star ) )
+  omega <- exp( X %*% beta ) /(1 + exp( X %*% beta ) ) 
+  logr <- sum ( dbinom (y , size = 1, omega_star ,log = TRUE ) ) - sum( dbinom (y , size = 1, omega , log = TRUE ) )
+  + dmvn (t( beta_star ) , mu = b , sigma =    sigma_beta * diag ( p + 1) , log = TRUE ) - 
+    dmvn (t( beta ) , mu = b , sigma =   sigma_beta * diag ( p + 1) , log = TRUE )
+
+  
+  # Approximate the prior ratio to 1 here
+  if ( logr >= log ( runif (1, 0, 1) ) ) {
+    beta <- beta_star
+    if( t > B){
+      accept <- accept + 1
+    }
+  }
+  beta_store [t ,] <- beta
+  yf_store [t ,] <- rbinom(n ,1, exp( X %*% beta ) /(1 + exp( X %*% beta ) ))
+}
+```
+```{r,echo=FALSE,fig.align='center',out.width="100%"}
+par(mfrow=c(2,2))
+plot(c(beta_initial,beta_store[(B+1):T,2]),type = "l",ylim = c(), ylab = expression(beta), xlab = "Iterations", main = "Trace plot of beta_1")
+hist(beta_store[(B + 1):T, 2], probability = T,xlab="beta1",main="Histrogram of beta_1")
+curve(dnorm(x,mean=mean(beta_store[(B + 1):T, 2]),sd=sd(beta_store[(B + 1):T, 2])),col="red",lwd=2,add=TRUE,yaxt="n")
+plot(c(beta_initial,beta_store[(B+1):T,3]),type = "l",ylim = c(), ylab = expression(beta), xlab = "Iterations", main = "Trace plot of beta_2")
+hist(beta_store[(B + 1):T, 3], probability = T,xlab="beta1",main="Histrogram of beta_2")
+curve(dnorm(x,mean=mean(beta_store[(B + 1):T, 3]),sd=sd(beta_store[(B + 1):T, 3])),col="red",lwd=2,add=TRUE,yaxt="n")
+```
+
+## Posterior predictive checking
+
+\scriptsize 
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{rr}
+  \hline
+y=0 &  y=1 \\ 
+\hline
+ 7 &  43 \\ 
+   \hline
+\end{tabular}
+\caption{Observed count of $y_i$} 
+\end{table}
+
+
+```{r echo=FALSE, fig.align='center',out.width="70%"}
+par(pty="m")
+plot(colMeans(yf_store[( B + 1) :T ,]),type = "h", main = "PPI plot",ylab = "predictive probability")
+points(colMeans(yf_store[( B + 1) :T ,]), col=y+1, pch=16)
+legend(x = "topright", pch=16,col =c("black","red"),legend = c("y=0","y=1"),horiz =TRUE,xpd=TRUE,cex=0.8)
+```
+
+# Real data analysis
+
+## Frequentist Approach
+
+\centering
+
+\footnotesize
+
+
+```{r echo=FALSE,results='asis'}
+cancer<- read.csv("haberman.csv",header = TRUE)[,-1]
+for(i in 1:length(cancer$Status)){ cancer$Status[i]<-ifelse(cancer$Status[i]==2,0,1)}
+library(ISLR)
+full.model<-glm(as.factor(Status)~.,family = binomial,data = cancer)
+beta_glm<-coef(full.model)
+library(xtable)
+xtable(summary(full.model)$coefficients,digits=4, caption = "Beta coefficients from GLM output")
+```
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{lrrrr}
+  \hline
+ & Estimate & Std. Error & z value & Pr($>$$|$z$|$) \\ 
+  \hline
+(Intercept) & 12.9329 & 4.3192 & 2.9943 & 0.0028 \\ 
+  Age & -0.1906 & 0.0991 & -1.9241 & 0.0543 \\ 
+  Aux\_nodes & -0.0424 & 0.0532 & -0.7968 & 0.4256 \\ 
+  tumour\_size & -0.1354 & 0.0276 & -4.9119 & 0.0000 \\ 
+   \hline
+\end{tabular}
+\caption{Beta coefficients from GLM output} 
+\end{table}
+
+
+```{r echo=FALSE, warning=FALSE,message=FALSE,out.width="40%",fig.align='center'}
+lr.prob.full <- predict(full.model, cancer, type = "response")
+lr.pred.full <- ifelse(lr.prob.full >= 0.5, 1, 0)
+Training.Error <-1 - mean(lr.pred.full == cancer[, "Status"])
+library(pROC)
+roc.lr<-roc(cancer[, "Status"], lr.prob.full, levels = c(0, 1))##ROC
+plot(roc.lr, legacy.axes = T,main="ROC curve for logistic regression")
+```
+- The **Area Under the Curve (AUC)** is 0.9257 which very is close to 1.
+- Therefore this model is a good classifier.
+
+## Bayesian Approach
+
+
+```{r,include=FALSE}
+# Read data information
+y <- cancer$Status
+n <- length(y)
+p <- dim(cancer)[2] - 1
+X <- cbind (rep(1, n ) , as.matrix ( cancer[ , -3]) )
+
+# Set the prior setting
+res<-residuals(full.model)
+rss<-sum(res^2)
+sigma_beta<-rss/(n-(p+1))
+b<-beta_glm
+
+
+# Set the algorithm setting
+T <- 10000
+B <- 5000
+k <- 10
+cov <- k * solve (t( X ) %*% X )
+beta_initial <- rep (0, p + 1)
+
+# Create spaces to store the results
+beta_store <- matrix ( NA , nrow = T , ncol = p + 1)
+yf_store <- matrix ( NA , nrow = T , ncol = n )
+
+# Implement the RWMH
+require(mvnfast)
+beta <- beta_initial
+omega <- exp( X %*% beta ) /(1 + exp( X %*% beta ) )
+accept <- 0
+
+for (t in 1: T ) {
+  beta_star <- t( rmvn (1, mu = beta , sigma = cov) )
+  omega_star <- exp( X %*% beta_star ) /(1 + exp( X %*% beta_star ) )
+  omega <- exp( X %*% beta ) /(1 + exp( X %*% beta ) ) 
+  logr <- sum ( dbinom (y , size = 1, omega_star ,log = TRUE ) ) - sum( dbinom (y , size = 1, omega , log = TRUE ) )
+  + dmvn (t( beta_star ) , mu = b , sigma =    sigma_beta * diag ( p + 1) , log = TRUE ) - 
+    dmvn (t( beta ) , mu = b , sigma =   sigma_beta * diag ( p + 1) , log = TRUE )
+
+  
+  # Approximate the prior ratio to 1 here
+  if ( logr >= log ( runif (1, 0, 1) ) ) {
+    beta <- beta_star
+    if( t > B){
+      accept <- accept + 1
+    }
+  }
+  beta_store [t ,] <- beta
+  yf_store [t ,] <- rbinom(n ,1, exp( X %*% beta ) /(1 + exp( X %*% beta ) ))
+}
+
+acceptance<- accept /( T - B )
+```
+\footnotesize
+
+- The proposal distribution is adjusted such that $k=10$ and so the acceptance rate is $0.4612$.
+
+```{r echo=FALSE,fig.align='center',out.width="80%"}
+par(mfrow=c(2,2))
+plot(c(beta_initial,beta_store[(B+1):T,1]),type = "l",ylim = c(), ylab = expression(beta), xlab = "Iterations", main = "Trace plot of beta_0",cex=0.8)
+plot(c(beta_initial,beta_store[(B+1):T,2]),type = "l",ylim = c(), ylab = expression(beta), xlab = "Iterations", main = "Trace plot of beta_1",cex=0.8)
+plot(c(beta_initial,beta_store[(B+1):T,3]),type = "l",ylim = c(), ylab = expression(beta), xlab = "Iterations", main = "Trace plot of beta_2 ",cex=0.8)
+plot(c(beta_initial,beta_store[(B+1):T,4]),type = "l",ylim = c(), ylab = expression(beta), xlab = "Iterations", main = "Trace plot of beta_3 ",cex=0.8)
+```
+
+## Posterior densities of $\beta$s
+
+```{r,echo=FALSE,fig.align="center",  out.width = "78%"}
+par(mfrow=c(2,2))
+d <- density(beta_store[,1]) # returns the density data
+plot(d,main="density of beta_0")
+d1 <- density(beta_store[,2])  # returns the density data
+plot(d1,main="density of beta_1") # plots the results
+d2 <- density(beta_store[,3]) # returns the density data
+plot(d2,main="density of beta_2")
+d3 <- density(beta_store[,4])  # returns the density data
+plot(d3,main="density of beta_3") # plots the results
+```
+
+- Shape wise the $\beta$ distributions look more like symmetric.
+
+
+## $\beta$ estimates
+
+\scriptsize
+```{r,echo=FALSE,warning=FALSE, message=FALSE,results='asis'}
+##CI for frequentist 
+require(MASS)
+CI_f<-confint.default(full.model)
+beta_bayes<-colMeans(beta_store[( B + 1) :T ,])
+CI<-t(apply(beta_store[( B + 1) :T ,],2, quantile,probs=c(0.025,0.975)))
+#d<-as.data.frame(CI)
+#names(d)<-c("beta_0","beta_1","beta_2","beta_3")
+#xtable(d)
+#xtable(cbind(CI_f,CI),digits=4)
+```
+\begin{table}[ht]
+\centering
+\begin{tabular}{lrr}
+  \hline
+ & Frequentist approach & Bayesian approach  \\ 
+  \hline
+$\beta_0$ & 12.93288915& 15.32778623 \\ 
+  $\beta_1$ &-0.19061434 & -0.23602491 \\ 
+  $\beta_2$ & -0.04237426 & -0.05466828\\ 
+  $\beta_3$ & -0.13535657 & -0.14782607\\ 
+   \hline
+\end{tabular}
+\caption{Beta coefficients from both methods} 
+\end{table}
+
+```{r echo=FALSE,fig.align='center',fig.height=3.5, fig.width=7,out.width="50%"}
+par(pty="s")
+plot(beta_glm[-1],beta_bayes[-1],asp=1,ylim = c(-1.2,1.2), xlim = c(-1.2,1.2),pch=16,xlab = expression(beta_glm),ylab =expression(beta_bayes) ,main= "Beta estimates of Frequentist Vs. Bayesian approach", cex.main =0.8 )
+abline(a=0,b=1,col=2)
+for(j in 2:(p+1)){
+  lines(c(beta_glm[j],beta_bayes[j]),quantile(beta_store[(B+1):T,j],c(0.025,0.975)),type = "l")
+}
+```
+
+## Credible Intervals for $\beta$ 
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{ccccc}
+  \hline
+ & \multicolumn{2}{c}{Frequentist Approach} & \multicolumn{2}{c}{Bayesian Approach} \\ 
+  & 2.5 \% & 97.5 \% & 2.5 \% & 97.5 \% \\ 
+  \hline
+$\beta_0$ & 4.4675 & 21.3983 & 6.4539 & 26.4662 \\ 
+  $\beta_1$ & -0.3848 & 0.0036 & -0.4819 & -0.0371 \\ 
+  $\beta_2$ & -0.1466 & 0.0619 & -0.1572 & 0.0395 \\ 
+  $\beta_3$ & -0.1894 & -0.0813 & -0.2107 & -0.0943 \\
+   \hline
+\end{tabular}
+\caption{95\% CI from Frequentist Approach and Bayesian Approach} 
+\end{table}
+
+
+## Posterior predictive checking
+
+```{r, echo=FALSE, fig.align='center',out.width="90%"}
+plot(colMeans(yf_store[( B + 1) :T ,]),type = "h", main = "PPI plot", ylab = "Predictive probability")
+points(colMeans(yf_store[( B + 1) :T ,]), col=y+1, pch=16)
+legend(x = "topright", pch=16,col =c("black","red"),legend = c("y=0","y=1"),horiz =TRUE,xpd=TRUE,cex=0.8)
+```
+
+## Cont..
+
+```{r, include=FALSE,results='asis'}
+xtable(table(y))
+```
+\begin{table}[ht]
+\centering
+\begin{tabular}{rr}
+  \hline
+y=0 &  y=1 \\ 
+\hline
+ 26 &  74 \\ 
+   \hline
+\end{tabular}
+\caption{Observed count of the survival status} 
+\end{table}
+
+- The observed data for $y=1$ (the patient survived 5 years or longer) have a higher probability to be sampled in the predictive distribution.
+\vspace{0.2cm}
+- **$y=1$ (the patient survived 5 years or longer) have a higher posterior predictive distribution of inclusion.**
+\vspace{0.2cm}
+- The model fits the data very well.
+
+
+
+## Regularization 
+
+- Spike and Slab Prior
+
+$$
+\begin{aligned}
+\beta_j|\sigma^2,\gamma_j &\sim (1-\gamma_j)\textbf{I}_0(\beta_j)+\gamma_j \text{N}(0,h\sigma^2)\\
+\sigma^2 & \sim \text{IG}(\frac{\nu_0}{2},\frac{\nu_0\sigma_0^2}{2})\\
+\gamma_j & \sim\text{Bern}(\omega)\\
+\text{Hyperprior} \quad \omega & \sim \text{Beta}(a,b)
+\end{aligned}
+$$
+
+- Prior Setting :
+$\omega$ = 0.6
+$h$=1
+
+- Add-Delete algorithm was used to update $\gamma_j$. 
+
+
+
+
+```{r echo=FALSE}
+
+# Bayesian linear regression with variable selection =====================================
+# Write a function to compute the marginal probability f(y|gamma)
+
+
+cancer<- read.csv("haberman.csv",header = TRUE)[,-1]
+for(i in 1:length(cancer$Status)){ cancer$Status[i]<-ifelse(cancer$Status[i]==2,0,1)}
+
+y <- cancer$Status
+n <- length(y)
+p <- dim(cancer)[2] - 1
+X <- cbind (rep(1, n ) , as.matrix ( cancer[ , -3]) )
+
+loglklh = function(y, X, h, a, b) {
+  n <- dim(X)[1]
+  p <- dim(X)[2]
+  G <- t(X) %*% X + diag(rep(1, p))/h
+  return (-p/2*log(h) - 1/2*determinant(G, logarithm = TRUE)$modulus - 
+            (a + n/2)*log(b + 1/2*t(y) %*% (diag(rep(1, n)) - X %*% solve(G) %*% t(X)) %*% y))
+}
+
+# Set the prior settings
+omega <- 0.6
+h <- 0.5
+a <- 3
+b <- 1
+nu_0 <- 1
+sigma_0 <- sigma_beta
+
+# Set the algorithm settings
+T <- 4000
+B <- 2000
+
+# Create the space to store the results
+gamma_store <- matrix(NA, nrow = T, ncol = p + 1)
+beta_store1 <- matrix(NA, nrow = T, ncol = p + 1)
+
+# Implement the add-delete algorithm
+gamma <- rbinom(p + 1, 1, prob = omega)
+for (t in 1:T) {
+  # Update gamma
+  j <- sample(1:(p + 1), 1)
+  gamma_star <- gamma
+  gamma_star[j] <- 1 - gamma[j]
+  if (sum(gamma_star) < 2) {
+    next
+  }
+  loghastings <- loglklh(y, as.matrix(X[, which(gamma_star == 1)]), h, a, b) - 
+    loglklh(y, as.matrix(X[, which(gamma == 1)]), h, a, b) +
+    dbinom(gamma_star[j], 1, omega) -
+    dbinom(gamma[j], 1, omega)
+  if (loghastings >= log(runif(1, 0, 1))) {
+    gamma[j] <- gamma_star[j]
+  }
+  
+  # Sample beta
+  V <- solve(diag(rep(1, sum(gamma)))/h + t(as.matrix(X[, which(gamma == 1)])) %*% as.matrix(X[, which(gamma == 1)]))
+  m <- V %*% t(as.matrix(X[, which(gamma == 1)]))%*% y
+  beta <- rep(0, p + 1)
+  
+  # Update sigma
+  a_n <- (nu_0 + n)/2
+  b_n <- (nu_0*sigma_0^2 +t(y)%*%y-t(m)%*%solve(V)%*%m)/2
+  sigma <- sqrt(1/rgamma(1, shape = a_n, rate = b_n))
+  
+  beta[which(gamma == 1)] <- rmvn(1, m,(sigma^2)*V) 
+  
+  # Store the results
+  gamma_store[t,] <- gamma
+  beta_store1[t,] <- beta
+}
+```
+
+## Prediction evaluation
+```{r, include=FALSE,results='asis'}
+# Prediction evaluation for regularization
+beta_hat <- colMeans(beta_store1[(B + 1):T,], na.rm = TRUE)
+mu<- exp((X %*% beta_hat)) /(1 + exp((X %*% beta_hat)))
+y_hat<-rep(NA, n )
+for(i in 1:n){y_hat[i]<-ifelse(mu[i]>=0.5,1,0)}
+r<-print(sum((y - y_hat)^2/n))
+
+##bayesian model
+
+bayes<-(mean((y-yf_store)^2))
+
+d<-data.frame(0.3842,0.26)
+names(d)<- c("MVN Prior","Regularization")
+xtable::xtable(d)
+```
+ \begin{table}[ht]
+\centering
+\begin{tabular}{rrr}
+  \hline
+ & MVN Prior & Regularization \\ 
+  \hline
+1 & 0.38 & 0.26 \\ 
+   \hline
+\end{tabular}
+\caption{MSE comparison}
+\end{table}
+
+```{r echo=FALSE,fig.align='center',out.width="100%",fig.height=4,fig.width=7}
+par(pty="m")
+plot(colMeans(gamma_store[(B + 1):T,], na.rm = TRUE), type = "h", 
+     xlab = "Sample Index", ylab = "Posterior Probability of Inclusion",main = "Spike and slab prior",
+     ylim = c(0, 1))
+```
+
+# Summary
+
+- The $\beta$ estimates from the two methods closely align.
+\vspace{0.2cm}
+- The Bayesian model captures the uncertainty which is not covered by the frequentist approach.
+\vspace{0.2cm}
+- A sensitivity analysis can be performed by varying the prior settings.
+\vspace{0.2cm}
+- The posterior distribution can be approximated using Grid approximation and Acceptance-rejection sampling also.
+\vspace{0.2cm}
+- Bayesian methodology can be used to overcome the small sample issue through a regularization methodology.
+
+
+# References
+
+-  DuMouchel, W. (2012). Multivariate Bayesian logistic regression for analysis of clinical study safety issues. Statistical Science, 27(3), 319-339.
+
+-  Hoff, P. D. (2009). A first course in Bayesian statistical methods (Vol. 580). New York: Springer.
+
+-  O'brien, S. M., & Dunson, D. B. (2004). Bayesian multivariate logistic regression. Biometrics, 60(3), 739-746.
+
+-  O'Malley, A. J., & Zou, K. H. (2006). Bayesian multivariate hierarchical transformation models for ROC analysis. Statistics in Medicine, 25(3), 459-479.
+
+- Chen, M. H., & Dey, D. K. (2003). Variable selection for multivariate logistic regression models. Journal of Statistical Planning and Inference, 111(1-2), 37-55.
+
+- Cawley, G. C., & Talbot, N. L. (2006). Gene selection in cancer classification using sparse logistic regression with Bayesian regularization. Bioinformatics, 22(19), 2348-2355.
+
+
+## Any Questions?
+
+
+\centering 
+
+\huge
+
+Thank You!
+
+
+
+
+
